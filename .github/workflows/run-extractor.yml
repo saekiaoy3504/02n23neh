@@ -1,0 +1,37 @@
+name: Run Extractor Data
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  run-script:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4320
+    strategy:
+      matrix:
+        instance: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    env:
+      API_BASE_URL: ${{ secrets.API_BASE_URL }}
+      ERROR_API_TIMEOUT: ${{ secrets.ERROR_API_TIMEOUT }}
+      INSTANCE: ${{ matrix.instance }}
+      GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Decrypt source with GPG
+        run: |
+          echo "${{ secrets.GPG_PASSPHRASE }}" | gpg --batch --yes --passphrase-fd 0 -o extractor/main.py -d extractor/main.py.gpg
+
+      - name: Run extractor
+        run: python -u extractor/main.py
